@@ -1,3 +1,7 @@
+from __future__ import print_function
+
+import sys
+
 import numpy as np
 
 from gnuradio import uhd
@@ -7,9 +11,36 @@ class RadioInterface():
     def __init__(self, profile):
         self.profile = profile
         
-        ip_address = "addr=" + profile.usrp_ip_address
+        search_criteria = uhd.device_addr_t()
+        if profile.usrp_device_name is not None:
+            search_criteria['name'] = profile.usrp_device_name
+        if profile.usrp_device_type is not None:
+            search_criteria['type'] = profile.usrp_device_type
+        if profile.usrp_serial is not None:
+            search_criteria['serial'] = profile.usrp_device_type
+        if profile.usrp_ip_address is not None:
+            search_criteria['addr'] = profile.usrp_ip_address
+
+        found_devices = uhd.find_devices(search_criteria)
+
+        if len(found_devices) != 1:
+            err =  "Found {} devices that matches USRP identification\n"
+            err += "information in the test profile:\n"
+            err += search_criteria.to_pp_string()
+            err += "Please add/correct unique identifying information.\n"
+            print(err, file=sys.stderr)
+            for device in found_devices:
+                print()
+                print(device.to_pp_string())
+                print()
+            raise RuntimeError()
+        else:
+            device = found_devices[0]
+            print("Found the following USRP matching test profile criteria:\n")
+            print(device.to_pp_string())
+            
         stream_args = uhd.stream_args(profile.usrp_stream_args)
-        self.usrp = uhd.usrp_source(device_addr=ip_address,
+        self.usrp = uhd.usrp_source(device_addr=device,
                                     stream_args=stream_args)
 
         self.usrp.set_auto_dc_offset(False)
