@@ -1,6 +1,6 @@
 # Measurement parameters
 
-nskip = int(sample_rate)
+nskip = 1000000
 nsamples = 1000
 scale_factor = 1
 nmeasurements = 72
