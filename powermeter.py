@@ -16,26 +16,25 @@ class PowerMeter(object):
         self.meter = rm.open_resource(profile.powermeter_visa_connect_str)
 
         # Set meter to remote operating mode
-        self.meter.write("SYSTem:REMote")
+        self.meter.write('SYSTem:REMote')
 
         # TODO: handle errors
-        self.idn = meter.query("*IDN?").strip()
+        self.idn = self.meter.query('*IDN?').strip()
 
         # Set units dBm
-        self.meter.write("UNIT1:POWer DBM")
+        self.meter.write('UNIT1:POWer DBM')
 
         # Set data format to ASCII
-        self.meter.write("FORMat ASCii")
+        self.meter.write('FORMat ASCii')
 
         # Set number data byte order to "normal"
-        self.meter.write("FORMat:BORDer NORMal")
+        self.meter.write('FORMat:BORDer NORMal')
 
-        # Set rate to double
-        self.meter.write("SENSor:MRATe DOUBle")
+        # Set measurement rate to double (40 readings/second)
+        self.meter.write('SENSe:MRATe DOUBle')
 
     def take_measurement(self):
-        response = self.meter.query(self.profile.powermeter_scpi_measure_cmd,
-                                    delay=5)
+        response = self.meter.query(self.profile.powermeter_scpi_measure_cmd)
         return eng_notation.str_to_num(response)
 
     def __del__(self):

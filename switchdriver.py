@@ -13,7 +13,7 @@ class SwitchDriver(object):
         rm = visa.ResourceManager('@py')
         self.profile = profile
 
-        self.switch = rm.open_resource(profile.powerswitch_visa_connect_str)
+        self.switch = rm.open_resource(profile.switchdriver_visa_connect_str)
 
     def select_radio(self):
         self.switch.write(self.profile.switchdriver_scpi_select_radio_cmd)

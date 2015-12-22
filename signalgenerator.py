@@ -19,7 +19,7 @@ class SignalGenerator(object):
         self.siggen.write(':SYSTem:PRESet')
 
         # TODO: handle errors
-        self.idn = siggen.query('*IDN?').strip()
+        self.idn = self.siggen.query('*IDN?', delay=5).strip()
 
         # Disable modulation
         self.siggen.write(':OUTPut:MODulation:STATe OFF')
@@ -31,13 +31,13 @@ class SignalGenerator(object):
 
         ampl = profile.siggen_amplitude
         if profile.siggen_amplitude_check and ampl > -15:
-            err =  "The test profile specifies a signal generator amplitude of "
-            err += "{} which may damage your USRP. Most USRP frontends have a "
+            err =  "\n\nThe test profile specifies a signal generator amplitude of "
+            err += "{} which may damage your USRP.\nMost USRP frontends have a "
             err += "maximum input power of -15dBm.\n"
             err += "If you've taken steps to protect your frontend, add the "
             err += "following line in your test profile:\n\n"
-            err += "siggen_amplitude_check = False\n\n"
-            raise ValueError(err.format(profile.ampl))
+            err += "siggen_amplitude_check = False\n"
+            raise ValueError(err.format(ampl))
 
         pow_cmd = ':POWer ' + eng_notation.num_to_str(ampl) + 'DBM'
         self.siggen.write(pow_cmd)

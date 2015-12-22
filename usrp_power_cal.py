@@ -8,6 +8,7 @@ from pprint import pprint
 import sys
 import time
 
+from matplotlib import pyplot as plt
 import numpy as np
 
 from gnuradio import blocks, gr, uhd
@@ -18,63 +19,98 @@ from signalgenerator import SignalGenerator
 from switchdriver import SwitchDriver
 
 
+class DictDotAccessor(object):
+    """Allow test profile attributes to be accessed via dot operator"""
+    def __init__(self, dct):
+        self.__dict__.update(dct)
+
+
 def run_test(profile):
+    print("Initializing USRP")
     radio = RadioInterface(profile)
+    print("Initializing power meter")
     meter = PowerMeter(profile)
+    print("Initializing signal generator")
     siggen = SignalGenerator(profile)
+    print("Initializing switch")
     switch = SwitchDriver(profile)
 
     meter_measurements = []
     radio_measurements = []
 
-
-    for _ in range(profile.nmeasurements):
+    time.sleep(2)
+    
+    print("Signal generator RF ON")
+    siggen.rf_on()
+    
+    time.sleep(2)
+    print("-----\n")
+    
+    last_i = profile.nmeasurements - 1
+    for i in range(profile.nmeasurements):
         start_time = time.time()
 
+        print("Starting test {} at {}".format(i+1, int(start_time)))
+
+        print("Switching to power meter")
         switch.select_meter()
 
-        time.sleep(2)
+        time.sleep(1)
 
-        meter_measurement = self.meter.take_measurement()
+        print("Taking power meter measurement... ", end="")
+        sys.stdout.flush()
+        meter_measurement = meter.take_measurement()
         meter_measurements.append(meter_measurement)
-
+        print("{} dBm".format(meter_measurement))
+        
+        print("Switching to USRP")
         switch.select_radio()
 
-        time.sleep(2)
+        time.sleep(1)
 
+        print("Streaming samples from USRP... ", end="")
+        sys.stdout.flush()
         data = radio.acquire_samples()
-        i = np.real(data)
-        q = np.real(data)
-        meansquared = np.mean(i**2 + q**2)
+        idata = np.real(data)
+        qdata = np.real(data)
+        meansquared = np.mean(idata**2 + qdata**2)
         rms = np.sqrt(meansquared)
         meanpwr = np.square(rms)/50
-        meanpwr_dbm = 30 + 10*np.log10(meanpwr)
-
-        radio_measurement = mean_pwr_dbm
+        meanpwr_db = 30 + 10*np.log10(meanpwr)
+        print("received {} samples with mean power of {} dB".format(len(data), meanpwr_db))
+        
+        radio_measurement = meanpwr_db
         radio_measurements.append(radio_measurement)
 
-        # Block until time for next measurement
-        current_time = time.time()
-        test_duration = current_time - start_time
-        try:
-            time.sleep(profile.time_between_measurements - test_duration)
-        except IOError:
-            msg = "Test took longer ({}) than time_between_measurements ({})"
-            print(msg.format(test_duration, profile.time_between_measurements),
-                  file=sys.stderr)
-            pass
+        if i < last_i:
+            # Block until time for next measurement
+            current_time = time.time()
+            test_duration = current_time - start_time
+            seconds_to_sleep = profile.time_between_measurements - test_duration
+            print("Sleeping {} s until next test...".format(int(seconds_to_sleep)))
+            try:
+                time.sleep(seconds_to_sleep)
+            except IOError:
+                msg = "Test took longer ({}) than time_between_measurements ({})"
+                print(msg.format(test_duration, profile.time_between_measurements),
+                      file=sys.stderr)
+                pass
 
+        print("-----\n")
+            
     return (meter_measurements, radio_measurements)
 
 
 def dBm_to_volts(values):
-    np.sqrt(10**(values / 10) * 1e-3 * 50)
+    """Takes iterable of dBm and returns numpy array of volts"""
+    return np.sqrt(10**(np.array(values) / 10) * 1e-3 * 50)
 
-
+    
 def volts_to_dBm(values):
-    10*np.log10(values**2 / (50 * 1e-3))
+    """Takes iterable of volts and returns numpy array of dBm"""
+    return 10*np.log10(np.array(values)**2 / (50 * 1e-3))
 
-
+    
 def compute_scale_factor(meter_measurements, radio_measurements):
     # Convert power meter measurements from dBm to volts
     meter_measurements_volts = dBm_to_volts(meter_measurements)
@@ -100,36 +136,60 @@ if __name__ == '__main__':
     parser.add_argument('filename',
                         help="Filename of test profile",
                         type=filetype)
-    parser.add_argument('--plot',
-                        help="Plot power meter readings against scaled USRP " +
-                             "readings after test completes",
+    parser.add_argument('--no-plot',
+                        help="Do not plot power meter readings against " +
+                             "scaled USRP readings after test completes",
                         action='store_true')
     args = parser.parse_args()
 
-    profile = {}
-    execfile(args.filename, {}, profile)
+    raw_profile = {}
+    execfile(args.filename, {}, raw_profile)
 
     print("Using following profile:")
-    pprint(profile)
-
-    meter_measurements, radio_measurements = run_test()
+    pprint(raw_profile)
+    print()
+    
+    profile = DictDotAccessor(raw_profile)
+    
+    meter_measurements, radio_measurements = run_test(profile)
     scale_factor = compute_scale_factor(meter_measurements, radio_measurements)
-    print("\n\nComputed scale factor: {}\n\n".format(scale_factor))
+    print("\nComputed scale factor: {}\n".format(scale_factor))
 
-    if args.plot:
-        from matplotlib import pyplot as plt
+    if not args.no_plot:
+        print("Plotting...\n")
 
         radio_measurements_volts = dBm_to_volts(radio_measurements)
         scaled_radio_measurements = radio_measurements_volts * scale_factor
         scaled_radio_measurements_dBm = volts_to_dBm(scaled_radio_measurements)
 
-        meter_line, = plt.plot(meter_measurements,
-                 profile.nmeasurements,
-                 'b-',
-                 label="USRP")
-        usrp_line, = plt.plot(scaled_radio_measurements_dBm,
-                 profile.nmeasurements,
-                 'g-',
-                 label="power meter")
-        plt_legend = plt.legend()
+        title_txt = "Power Measurements Over Time With {} Scale Factor Applied to USRP"
+        plt.suptitle(title_txt.format(scale_factor))
+        
+        meter_line, = plt.plot(range(1, profile.nmeasurements+1),
+                               meter_measurements,
+                               'b-',
+                               label="USRP")
+        usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
+                              scaled_radio_measurements_dBm,
+                              'g--',
+                              label="power meter")
+        plt_legend = plt.legend(loc='best')
+        plt.grid(color='.90', linestyle='-', linewidth=1)
+        
+        ymin = np.min((meter_measurements, scaled_radio_measurements_dBm))
+        ymax = np.max((meter_measurements, scaled_radio_measurements_dBm))
+        yticks = np.linspace(np.floor(ymin), np.ceil(ymax), 11)
+        plt.yticks(yticks)
+        plt.ylabel("Power (dBm)")
+        
+        npoints = np.min((profile.nmeasurements, 10))
+        xticks = [int(x) for x in
+                  np.linspace(1, profile.nmeasurements, npoints, endpoint=True)]
+        plt.xticks(xticks)
+        xlabel_txt = "Number of measurements at {} second intervals"
+        plt.xlabel(xlabel_txt.format(profile.time_between_measurements))
+        
         plt.show()
+
+    print("Calibration completed successfully, exiting...")
+        
