@@ -8,7 +8,7 @@ nskip = 1000000
 nsamples = 1000
 scale_factor = 1
 nmeasurements = 72
-time_between_measurements = 600 # seconds
+time_between_measurements = 300 # seconds
 
 
 # Device settings

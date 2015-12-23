@@ -1,10 +1,14 @@
+#
+# Test profile for USRP B200
+#
+
 # Measurement parameters
 
 nskip = 1000000
 nsamples = 1000
 scale_factor = 1
-nmeasurements = 10 #72
-time_between_measurements = 12 #600 # seconds
+nmeasurements = 72
+time_between_measurements = 300 # seconds
 
 
 # Device settings

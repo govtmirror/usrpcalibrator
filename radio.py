@@ -17,7 +17,7 @@ class RadioInterface():
         if profile.usrp_device_type is not None:
             search_criteria['type'] = profile.usrp_device_type
         if profile.usrp_serial is not None:
-            search_criteria['serial'] = profile.usrp_device_type
+            search_criteria['serial'] = profile.usrp_serial
         if profile.usrp_ip_address is not None:
             search_criteria['addr'] = profile.usrp_ip_address
 
@@ -27,7 +27,7 @@ class RadioInterface():
             err =  "Found {} devices that matches USRP identification\n"
             err += "information in the test profile:\n"
             err += search_criteria.to_pp_string()
-            err += "Please add/correct unique identifying information.\n"
+            err += "Please add/correct identifying information.\n"
             print(err, file=sys.stderr)
             for device in found_devices:
                 print()
