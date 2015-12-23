@@ -15,4 +15,4 @@ Quick Start
 6. Copy and modify a `test_profile/*.profile` to your needs.
 **WARNING:** Notice there is a 30dB attenuator after the signal generator in the block diagram. If you don't have an attenuator make sure to adjust the `siggen_amplitude` and set `siggen_amplitude_check = True` so that USRP Calibrator will refuse to burn out the front end of your USRP!
 7. `./usrp_power_cal.py test_profiles/your.profile`
-8. The calibration utilty provides a *voltage* scale factor suitable for usage input to, e.g., GNU Radio's `mutliply_const_cc` block.
+8. The calibration utilty provides a *voltage* scale factor suitable for usage input to, e.g., GNU Radio's `multiply_const_cc` block.
