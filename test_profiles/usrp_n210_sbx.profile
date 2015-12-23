@@ -4,11 +4,11 @@
 
 # Measurement parameters
 
-nskip = 1000000
-nsamples = 1000
-scale_factor = 1
-nmeasurements = 72
-time_between_measurements = 300 # seconds
+nskip = 1000000                      # Number of samples to drop initially
+nsamples = 1000                      # Number of samples to use for power cal
+scale_factor = 1                     # Not currently used
+nmeasurements = 72                   # Number of measurements to perform
+time_between_measurements = 300      # Seconds between start of measurements
 
 
 # Device settings
@@ -23,7 +23,7 @@ usrp_serial = "F4A6C3"               # uhd_find_devices --args="serial=***"
 usrp_ip_address = '192.168.130.146'  # uhd_find_devices --args="addr=***"
 
 usrp_clock_rate = 100e6 # 100 MHz
-usrp_sample_rate = 1e6 # 1 MS/s
+usrp_sample_rate = 2e6 # 2 MS/s
 usrp_stream_args = 'fc32'
 usrp_gain = {'PGA0': 15}
 usrp_center_freq = 1700e6 # 1700 MHz
@@ -33,7 +33,7 @@ usrp_use_integerN_tuning = False
 siggen_visa_connect_str = 'TCPIP0::192.168.130.76::5025::INSTR'
 siggen_center_freq = 1700e6 # 1700 MHz
 siggen_amplitude = -10
-siggen_amplitude_check = False
+siggen_amplitude_check = False       # Leave "True" if siggen connected directly to USRP
 siggen_scpi_rf_on_cmd = ':OUTPut:STATe ON'
 siggen_scpi_rf_off_cmd = ':OUTPut:STATe OFF'
 
