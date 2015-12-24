@@ -162,7 +162,8 @@ if __name__ == '__main__':
         scaled_radio_measurements = radio_measurements_volts * scale_factor
         scaled_radio_measurements_dBm = volts_to_dBm(scaled_radio_measurements)
 
-        title_txt = "Power Measurements Over Time With {} Scale Factor Applied to {} {}"
+        title_txt  = "Power Measurements Over Time\n"
+        title_txt += "With {} Scale Factor Applied to {} {}"
         plt.suptitle(title_txt.format(scale_factor, profile.usrp_device_str, profile.usrp_serial))
         
         meter_line, = plt.plot(range(1, profile.nmeasurements+1),
