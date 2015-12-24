@@ -50,7 +50,7 @@ Using following profile:
  'usrp_ip_address': '192.168.***.***',
  'usrp_lo_offset': 1000000.0,
  'usrp_sample_rate': 2000000.0,
- 'usrp_serial': 'F4A6C3',
+ 'usrp_serial': *******,
  'usrp_stream_args': 'fc32',
  'usrp_use_integerN_tuning': False}
 
