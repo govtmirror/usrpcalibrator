@@ -49,5 +49,7 @@ class SignalGenerator(object):
         self.siggen.write(self.profile.siggen_scpi_rf_off_cmd)
 
     def __del__(self):
+        # Return siggen to PRESet state
+        self.siggen.write(':SYSTem:PRESet')
         self.rf_off()
         self.siggen.close()

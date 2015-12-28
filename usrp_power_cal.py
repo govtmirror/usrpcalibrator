@@ -167,11 +167,11 @@ if __name__ == '__main__':
         plt.suptitle(title_txt.format(scale_factor, profile.usrp_device_str, profile.usrp_serial))
         
         meter_line, = plt.plot(range(1, profile.nmeasurements+1),
-                               meter_measurements,
+                               scaled_radio_measurements_dBm,
                                'b-',
                                label="USRP")
         usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
-                              scaled_radio_measurements_dBm,
+                              meter_measurements,
                               'g--',
                               label="power meter")
         plt_legend = plt.legend(loc='best')
