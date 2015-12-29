@@ -8,7 +8,7 @@ nskip = 1000000                      # Number of samples to drop initially
 nsamples = 1000                      # Number of samples to use for power cal
 scale_factor = 1                     # Not currently used
 nmeasurements = 60                   # Number of measurements to perform
-time_between_measurements = 30       # Seconds between start of measurements
+time_between_measurements = 60       # Seconds between start of measurements
 
 
 # Device settings
@@ -22,8 +22,8 @@ usrp_device_type = "b200"            # uhd_find_devices --args="type=***"
 usrp_serial = "30A9FFA"              # uhd_find_devices --args="serial=***"
 usrp_ip_address = None               # uhd_find_devices --args="addr=***"
 
-usrp_clock_rate = 30.72e6 # 30.72 MHz
-usrp_sample_rate = 1.92e6 # 1.92 MS/s
+usrp_clock_rate = 40e6 # 40 MHz
+usrp_sample_rate = 2e6 # 2 MS/s
 usrp_stream_args = 'fc32'
 usrp_gain = {'PGA': 40}
 usrp_center_freq = 1700e6 # 1700 MHz

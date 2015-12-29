@@ -8,7 +8,7 @@ nskip = 1000000                      # Number of samples to drop initially
 nsamples = 1000                      # Number of samples to use for power cal
 scale_factor = 1                     # Not currently used
 nmeasurements = 60                   # Number of measurements to perform
-time_between_measurements = 30       # Seconds between start of measurements
+time_between_measurements = 60       # Seconds between start of measurements
 
 
 # Device settings

@@ -55,7 +55,7 @@ def run_test(profile):
         print("Switching to power meter")
         switch.select_meter()
 
-        time.sleep(1)
+        time.sleep(2)
 
         print("Taking power meter measurement... ", end="")
         sys.stdout.flush()
@@ -66,7 +66,7 @@ def run_test(profile):
         print("Switching to USRP")
         switch.select_radio()
 
-        time.sleep(1)
+        time.sleep(2)
 
         print("Streaming samples from USRP... ", end="")
         sys.stdout.flush()
