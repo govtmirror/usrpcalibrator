@@ -72,7 +72,7 @@ def run_test(profile):
         sys.stdout.flush()
         data = radio.acquire_samples()
         idata = np.real(data)
-        qdata = np.real(data)
+        qdata = np.imag(data)
         meansquared = np.mean(idata**2 + qdata**2)
         rms = np.sqrt(meansquared)
         meanpwr = np.square(rms)/50
