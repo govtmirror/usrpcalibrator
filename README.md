@@ -114,3 +114,5 @@ Calibration completed successfully, exiting...
 ```
 
 ![N210 Plot](img/USRP_N210.png)
+
+![B200 Plot](img/USRP_B200.png)
