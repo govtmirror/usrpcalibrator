@@ -17,12 +17,7 @@ from radio import RadioInterface
 from powermeter import PowerMeter
 from signalgenerator import SignalGenerator
 from switchdriver import SwitchDriver
-
-
-class DictDotAccessor(object):
-    """Allow test profile attributes to be accessed via dot operator"""
-    def __init__(self, dct):
-        self.__dict__.update(dct)
+from utils import DictDotAccessor
 
 
 def run_test(profile):
@@ -39,13 +34,13 @@ def run_test(profile):
     radio_measurements = []
 
     time.sleep(2)
-    
+
     print("Signal generator RF ON")
     siggen.rf_on()
-    
+
     time.sleep(2)
     print("-----\n")
-    
+
     last_i = profile.nmeasurements - 1
     for i in range(profile.nmeasurements):
         start_time = time.time()
@@ -62,7 +57,7 @@ def run_test(profile):
         meter_measurement = meter.take_measurement()
         meter_measurements.append(meter_measurement)
         print("{} dBm".format(meter_measurement))
-        
+
         print("Switching to USRP")
         switch.select_radio()
 
@@ -78,7 +73,7 @@ def run_test(profile):
         meanpwr = np.square(rms)/50
         meanpwr_db = 30 + 10*np.log10(meanpwr)
         print("received {} samples with mean power of {} dB".format(len(data), meanpwr_db))
-        
+
         radio_measurement = meanpwr_db
         radio_measurements.append(radio_measurement)
 
@@ -97,7 +92,7 @@ def run_test(profile):
                 pass
 
         print("-----\n")
-            
+
     return (meter_measurements, radio_measurements)
 
 
@@ -105,12 +100,12 @@ def dBm_to_volts(values):
     """Takes iterable of dBm and returns numpy array of volts"""
     return np.sqrt(10**(np.array(values) / 10) * 1e-3 * 50)
 
-    
+
 def volts_to_dBm(values):
     """Takes iterable of volts and returns numpy array of dBm"""
     return 10*np.log10(np.array(values)**2 / (50 * 1e-3))
 
-    
+
 def compute_scale_factor(meter_measurements, radio_measurements):
     # Convert power meter measurements from dBm to volts
     meter_measurements_volts = dBm_to_volts(meter_measurements)
@@ -148,9 +143,9 @@ if __name__ == '__main__':
     print("Using following profile:")
     pprint(raw_profile)
     print()
-    
+
     profile = DictDotAccessor(raw_profile)
-    
+
     meter_measurements, radio_measurements = run_test(profile)
     scale_factor = compute_scale_factor(meter_measurements, radio_measurements)
     print("\nComputed scale factor: {}\n".format(scale_factor))
@@ -164,7 +159,7 @@ if __name__ == '__main__':
 
         title_txt = "Power Measurements Over Time With {} Scale Factor Applied to {} {}"
         plt.suptitle(title_txt.format(scale_factor, profile.usrp_device_str, profile.usrp_serial))
-        
+
         meter_line, = plt.plot(range(1, profile.nmeasurements+1),
                                meter_measurements,
                                'b-',
@@ -175,21 +170,20 @@ if __name__ == '__main__':
                               label="power meter")
         plt_legend = plt.legend(loc='best')
         plt.grid(color='.90', linestyle='-', linewidth=1)
-        
+
         ymin = np.min((meter_measurements, scaled_radio_measurements_dBm))
         ymax = np.max((meter_measurements, scaled_radio_measurements_dBm))
         yticks = np.linspace(np.floor(ymin), np.ceil(ymax), 11)
         plt.yticks(yticks)
         plt.ylabel("Power (dBm)")
-        
+
         npoints = np.min((profile.nmeasurements, 10))
         xticks = [int(x) for x in
                   np.linspace(1, profile.nmeasurements, npoints, endpoint=True)]
         plt.xticks(xticks)
         xlabel_txt = "Number of measurements at {} second intervals"
         plt.xlabel(xlabel_txt.format(profile.time_between_measurements))
-        
+
         plt.show()
 
     print("Calibration completed successfully, exiting...")
-        
