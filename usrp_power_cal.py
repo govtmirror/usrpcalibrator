@@ -50,7 +50,7 @@ def run_test(profile):
         print("Switching to power meter")
         switch.select_meter()
 
-        time.sleep(1)
+        time.sleep(2)
 
         print("Taking power meter measurement... ", end="")
         sys.stdout.flush()
@@ -61,13 +61,13 @@ def run_test(profile):
         print("Switching to USRP")
         switch.select_radio()
 
-        time.sleep(1)
+        time.sleep(2)
 
         print("Streaming samples from USRP... ", end="")
         sys.stdout.flush()
         data = radio.acquire_samples()
         idata = np.real(data)
-        qdata = np.real(data)
+        qdata = np.imag(data)
         meansquared = np.mean(idata**2 + qdata**2)
         rms = np.sqrt(meansquared)
         meanpwr = np.square(rms)/50
@@ -157,15 +157,16 @@ if __name__ == '__main__':
         scaled_radio_measurements = radio_measurements_volts * scale_factor
         scaled_radio_measurements_dBm = volts_to_dBm(scaled_radio_measurements)
 
-        title_txt = "Power Measurements Over Time With {} Scale Factor Applied to {} {}"
+        title_txt  = "Power Measurements Over Time\n"
+        title_txt += "With {} Scale Factor Applied to {} {}"
         plt.suptitle(title_txt.format(scale_factor, profile.usrp_device_str, profile.usrp_serial))
 
-        meter_line, = plt.plot(range(1, profile.nmeasurements+1),
-                               meter_measurements,
+        usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
+                               scaled_radio_measurements_dBm,
                                'b-',
                                label="USRP")
-        usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
-                              scaled_radio_measurements_dBm,
+        meter_line, = plt.plot(range(1, profile.nmeasurements+1),
+                              meter_measurements,
                               'g--',
                               label="power meter")
         plt_legend = plt.legend(loc='best')
