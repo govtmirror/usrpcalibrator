@@ -36,12 +36,15 @@ class qa_stitch_fft_segments_ff(gr_unittest.TestCase):
         overlap = 0.25
         fft_size = 32
         n_segments = 1
-        n_valid_bins = 24 #int(fft_size - (fft_size * overlap))
+        n_valid_bins = 24 #int((fft_size - (fft_size * overlap)) // 2 * 2)
         src_data = np.arange(32)
         expected_result = np.arange(4, 28)
         src = blocks.vector_source_f(src_data)
         s2v = blocks.stream_to_vector(gr.sizeof_float, fft_size * n_segments)
-        stitch = usrpcalibrator.stitch_fft_segments_ff(fft_size, n_segments, overlap)
+        stitch = usrpcalibrator.stitch_fft_segments_ff(fft_size,
+                                                       n_segments,
+                                                       overlap,
+                                                       n_valid_bins)
         dst = blocks.vector_sink_f(n_valid_bins * n_segments)
         dst = blocks.vector_sink_f(n_valid_bins * n_segments)
         self.tb.connect(src, s2v, stitch, dst)
@@ -52,10 +55,10 @@ class qa_stitch_fft_segments_ff(gr_unittest.TestCase):
         self.assertEqual(len(result_data), n_valid_bins*n_segments)
 
     def test_001(self):
-        overlap = 0.25
+        overlap = 0.1
         fft_size = 512
         n_segments = 4
-        n_valid_bins = 384 #int(fft_size - (fft_size * overlap))
+        n_valid_bins = 460 #int((fft_size - (fft_size * overlap)) // 2 * 2)
         src_data = np.concatenate((
             np.array([1] * fft_size),
             np.array([2] * fft_size),
@@ -70,7 +73,10 @@ class qa_stitch_fft_segments_ff(gr_unittest.TestCase):
         ))
         src = blocks.vector_source_f(src_data)
         s2v = blocks.stream_to_vector(gr.sizeof_float, fft_size * n_segments)
-        stitch = usrpcalibrator.stitch_fft_segments_ff(fft_size, n_segments, overlap)
+        stitch = usrpcalibrator.stitch_fft_segments_ff(fft_size,
+                                                       n_segments,
+                                                       overlap,
+                                                       n_valid_bins)
         dst = blocks.vector_sink_f(n_valid_bins * n_segments)
         self.tb.connect(src, s2v, stitch, dst)
         self.tb.run()
@@ -93,14 +99,17 @@ class qa_stitch_fft_segments_ff(gr_unittest.TestCase):
         overlap = 0.25
         fft_size = 8
         n_segments = 2
-        n_valid_bins = 6 #int(fft_size - (fft_size * overlap))
+        n_valid_bins = 6  #int((fft_size - (fft_size * overlap)) // 2 * 2)
         #src_data = np.concatenate((np.arange(0,8), np.arange(6,14)))
         src_data = np.array([ 0,  1,  2,  3,  4,  5,  6,  7,  6,  7,  8,  9, 10, 11, 12, 13])
         #expected_result = np.arange(1, 13)
         expected_result = np.array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12])
         src = blocks.vector_source_f(src_data)
         s2v = blocks.stream_to_vector(gr.sizeof_float, fft_size * n_segments)
-        stitch = usrpcalibrator.stitch_fft_segments_ff(fft_size, n_segments, overlap)
+        stitch = usrpcalibrator.stitch_fft_segments_ff(fft_size,
+                                                       n_segments,
+                                                       overlap,
+                                                       n_valid_bins)
         dst = blocks.vector_sink_f(n_valid_bins * n_segments)
         dst = blocks.vector_sink_f(n_valid_bins * n_segments)
         self.tb.connect(src, s2v, stitch, dst)

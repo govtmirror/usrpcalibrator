@@ -46,7 +46,10 @@ namespace gr {
        * class. usrpcalibrator::stitch_fft_segments_ff::make is the public interface for
        * creating new instances.
        */
-      static sptr make(size_t fft_size, size_t n_segments, float overlap);
+      static sptr make(size_t fft_size,
+                       size_t nsegments,
+                       float overlap,
+                       size_t nvalid_bins);
     };
 
   } // namespace usrpcalibrator

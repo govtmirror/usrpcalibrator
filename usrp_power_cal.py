@@ -17,7 +17,7 @@ from radio import RadioInterface
 from powermeter import PowerMeter
 from signalgenerator import SignalGenerator
 from switchdriver import SwitchDriver
-from utils import DictDotAccessor
+import utils
 
 
 def run_test(profile):
@@ -96,16 +96,6 @@ def run_test(profile):
     return (meter_measurements, radio_measurements)
 
 
-def dBm_to_volts(values):
-    """Takes iterable of dBm and returns numpy array of volts"""
-    return np.sqrt(10**(np.array(values) / 10) * 1e-3 * 50)
-
-
-def volts_to_dBm(values):
-    """Takes iterable of volts and returns numpy array of dBm"""
-    return 10*np.log10(np.array(values)**2 / (50 * 1e-3))
-
-
 def compute_scale_factor(meter_measurements, radio_measurements):
     # Convert power meter measurements from dBm to volts
     meter_measurements_volts = dBm_to_volts(meter_measurements)
@@ -144,7 +134,7 @@ if __name__ == '__main__':
     pprint(raw_profile)
     print()
 
-    profile = DictDotAccessor(raw_profile)
+    profile = utils.DictDotAccessor(raw_profile)
 
     meter_measurements, radio_measurements = run_test(profile)
     scale_factor = compute_scale_factor(meter_measurements, radio_measurements)
@@ -153,13 +143,15 @@ if __name__ == '__main__':
     if not args.no_plot:
         print("Plotting...\n")
 
-        radio_measurements_volts = dBm_to_volts(radio_measurements)
+        radio_measurements_volts = utils.dBm_to_volts(radio_measurements)
         scaled_radio_measurements = radio_measurements_volts * scale_factor
-        scaled_radio_measurements_dBm = volts_to_dBm(scaled_radio_measurements)
+        scaled_radio_measurements_dBm = utils.volts_to_dBm(scaled_radio_measurements)
 
         title_txt  = "Power Measurements Over Time\n"
         title_txt += "With {} Scale Factor Applied to {} {}"
-        plt.suptitle(title_txt.format(scale_factor, profile.usrp_device_str, profile.usrp_serial))
+        plt.suptitle(title_txt.format(scale_factor,
+                                      profile.usrp_device_str,
+                                      profile.usrp_serial))
 
         usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
                                scaled_radio_measurements_dBm,
