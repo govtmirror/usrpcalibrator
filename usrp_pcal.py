@@ -3,7 +3,6 @@
 from __future__ import division, print_function
 
 import argparse
-import os.path
 from pprint import pprint
 import sys
 import time
@@ -13,10 +12,10 @@ import numpy as np
 
 from gnuradio import blocks, gr, uhd
 
-from radio import RadioInterface
-from powermeter import PowerMeter
-from signalgenerator import SignalGenerator
-from switchdriver import SwitchDriver
+from instruments.radio import RadioInterface
+from instruments.powermeter import PowerMeter
+from instruments.signalgenerator import SignalGenerator
+from instruments.switchdriver import SwitchDriver
 import utils
 
 
@@ -41,7 +40,7 @@ def run_test(profile):
     time.sleep(2)
     print("-----\n")
 
-    last_i = profile.nmeasurements - 1
+    last_i = profile.pcal_nmeasurements - 1
     for i in range(profile.nmeasurements):
         start_time = time.time()
 
@@ -72,7 +71,8 @@ def run_test(profile):
         rms = np.sqrt(meansquared)
         meanpwr = np.square(rms)/50
         meanpwr_db = 30 + 10*np.log10(meanpwr)
-        print("received {} samples with mean power of {} dB".format(len(data), meanpwr_db))
+        rx_msg = "received {} samples with mean power of {} dB"
+        print(rx_msg.format(len(data), meanpwr_db))
 
         radio_measurement = meanpwr_db
         radio_measurements.append(radio_measurement)
@@ -80,15 +80,14 @@ def run_test(profile):
         if i < last_i:
             # Block until time for next measurement
             current_time = time.time()
-            test_duration = current_time - start_time
-            seconds_to_sleep = profile.time_between_measurements - test_duration
-            print("Sleeping {} s until next test...".format(int(seconds_to_sleep)))
+            actual_test_duration = current_time - start_time
+            desired_test_duration = profile.time_between_measurements
+            seconds_to_sleep = desired_test_duration - actual_test_duration
+            print("Sleeping {} s...".format(int(seconds_to_sleep)))
             try:
                 time.sleep(seconds_to_sleep)
             except IOError:
-                msg = "Test took longer ({}) than time_between_measurements ({})"
-                print(msg.format(test_duration, profile.time_between_measurements),
-                      file=sys.stderr)
+                # Test took longer than desired_test_duration
                 pass
 
         print("-----\n")
@@ -108,25 +107,7 @@ def compute_scale_factor(meter_measurements, radio_measurements):
     return meter_mean_voltage / radio_mean_voltage
 
 
-if __name__ == '__main__':
-    def filetype(fname):
-        """Return fname if file exists, or raise ArgumentTypeError"""
-        if os.path.isfile(fname):
-            return fname
-        else:
-            errmsg = "file {} does not exist".format(fname)
-            raise argparse.ArgumentTypeError(errmsg)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filename',
-                        help="Filename of test profile",
-                        type=filetype)
-    parser.add_argument('--no-plot',
-                        help="Do not plot power meter readings against " +
-                             "scaled USRP readings after test completes",
-                        action='store_true')
-    args = parser.parse_args()
-
+def main(args):
     raw_profile = {}
     execfile(args.filename, {}, raw_profile)
 
@@ -137,6 +118,7 @@ if __name__ == '__main__':
     profile = utils.DictDotAccessor(raw_profile)
 
     meter_measurements, radio_measurements = run_test(profile)
+
     scale_factor = compute_scale_factor(meter_measurements, radio_measurements)
     print("\nComputed scale factor: {}\n".format(scale_factor))
 
@@ -156,11 +138,13 @@ if __name__ == '__main__':
         usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
                                scaled_radio_measurements_dBm,
                                'b-',
-                               label="USRP")
+                               label="USRP",
+                              zorder=99)
         meter_line, = plt.plot(range(1, profile.nmeasurements+1),
-                              meter_measurements,
-                              'g--',
-                              label="power meter")
+                               meter_measurements,
+                               'g--',
+                               label="power meter",
+                               zorder=99)
         plt_legend = plt.legend(loc='best')
         plt.grid(color='.90', linestyle='-', linewidth=1)
 
@@ -171,8 +155,9 @@ if __name__ == '__main__':
         plt.ylabel("Power (dBm)")
 
         npoints = np.min((profile.nmeasurements, 10))
-        xticks = [int(x) for x in
-                  np.linspace(1, profile.nmeasurements, npoints, endpoint=True)]
+        xticks = [int(x) for x in np.linspace(1, profile.nmeasurements,
+                                              npoints,
+                                              endpoint=True)]
         plt.xticks(xticks)
         xlabel_txt = "Number of measurements at {} second intervals"
         plt.xlabel(xlabel_txt.format(profile.time_between_measurements))
@@ -180,3 +165,21 @@ if __name__ == '__main__':
         plt.show()
 
     print("Calibration completed successfully, exiting...")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filename',
+                        help="Filename of test profile",
+                        type=utils.filetype)
+    parser.add_argument('--no-plot',
+                        help="Do not plot power meter readings against " +
+                             "scaled USRP readings after test completes",
+                        action='store_true')
+    args = parser.parse_args()
+
+    try:
+        main(args)
+    except KeyboardInterrupt:
+        print("Caught Ctrl-C, exiting...", file=sys.stderr)
+        sys.exit(130)

@@ -1,3 +1,6 @@
+import argparse
+import os
+
 import numpy as np
 
 
@@ -6,6 +9,13 @@ class DictDotAccessor(object):
     def __init__(self, dct):
         self.__dict__.update(dct)
 
+def filetype(fname):
+    """Return fname if file exists, else raise ArgumentTypeError"""
+    if os.path.isfile(fname):
+        return fname
+    else:
+        errmsg = "file {} does not exist".format(fname)
+        raise argparse.ArgumentTypeError(errmsg)
 
 def split_octaves(freq_range):
    fstart = freq_range.start()
@@ -13,13 +23,13 @@ def split_octaves(freq_range):
    bands = []
    f = fstart
    while True:
-     oct = f * 2
-     if (oct + f) >= fstop:
+     octv = f * 2
+     if (octv + f) >= fstop:
        bands.append((f, fstop))
        break
      else:
-       bands.append((f, oct))
-       f = oct
+       bands.append((f, octv))
+       f = octv
    return bands
 
 

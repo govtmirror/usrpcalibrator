@@ -10,7 +10,7 @@ from gnuradio import uhd
 class RadioInterface():
     def __init__(self, profile):
         self.profile = profile
-        
+
         search_criteria = uhd.device_addr_t()
         if profile.usrp_device_name is not None:
             search_criteria['name'] = profile.usrp_device_name
@@ -38,27 +38,29 @@ class RadioInterface():
             device = found_devices[0]
             print("Found the following USRP matching test profile criteria:\n")
             print(device.to_pp_string())
-            
+
         stream_args = uhd.stream_args(profile.usrp_stream_args)
         self.usrp = uhd.usrp_source(device_addr=device,
                                     stream_args=stream_args)
 
-        self.usrp.set_auto_dc_offset(False)
+        self.usrp.set_auto_dc_offset(True)
         self.usrp.set_clock_rate(profile.usrp_clock_rate)
         self.usrp.set_samp_rate(profile.usrp_sample_rate)
         for gain_type, value in profile.usrp_gain.items():
             self.usrp.set_gain(value, gain_type)
 
-        tune_request = uhd.tune_request(profile.usrp_center_freq,
-                                        profile.usrp_lo_offset)
-        if profile.usrp_use_integerN_tuning:
-            tune_request.args = uhd.device_addr('mode_n=integer')
+        if profile.test_type == 'pcal':
+            tune_request = uhd.tune_request(profile.usrp_center_freq,
+                                            profile.usrp_lo_offset)
+            if profile.usrp_use_integerN_tuning:
+                tune_request.args = uhd.device_addr('mode_n=integer')
 
-        tune_result = self.usrp.set_center_freq(tune_request)
-        print(tune_result.to_pp_string())
+            tune_result = self.usrp.set_center_freq(tune_request)
+            print(tune_result.to_pp_string())
 
     def acquire_samples(self):
-        total_samples = self.profile.nskip + self.profile.nsamples
+        """Aquire samples for power cal"""
+        total_samples = self.profile.pcal_nskip + self.profile.pcal_nsamples
         acquired_samples = self.usrp.finite_acquisition(total_samples)
-        data = np.array(acquired_samples[self.profile.nskip:])
+        data = np.array(acquired_samples[self.profile.pcal_nskip:])
         return data

@@ -4,87 +4,78 @@ from __future__ import division, print_function
 
 import argparse
 import math
+from pprint import pprint
+import sys
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 import scipy.io as sio
 
 import gnuradio.fft
-import gnuradio.blocks
+from gnuradio import blocks
 from gnuradio import gr
 from gnuradio import uhd
 
+from instruments.radio import RadioInterface
 from usrpcalibrator import (controller_cc,
                             bin_statistics_ff,
                             stitch_fft_segments_ff)
-
 import utils
 
 
-# CONSTS
-SCALE_FACTOR = 1      # As computed by usrp_power_cal (match gain, srate)
-GAIN = 15
-SAMPLE_RATE = 10e6    # 10 MS/s
-FFT_LEN = 2**12       # 4096
-DELTA_F = SAMPLE_RATE / FFT_LEN
-FLATTOP_WIN = np.array(gnuradio.fft.window.flattop(FFT_LEN))
-ENBW = SAMPLE_RATE * sum(FLATTOP_WIN**2) / sum(FLATTOP_WIN)**2
-NENBW = ENBW / DELTA_F
-RBW = NENBW * DELTA_F # RBW == ENBW for discrete systems
-OVERLAP = .1          # Oversample to allow dropping outer 10% of bins
-NAVERAGES = 100       # Number of DFTs to average at each center frequency
-LO_OFFSET = SAMPLE_RATE / 2
-NSKIP_USRP_INIT = int(SAMPLE_RATE)  # Samples to drop after USRP init (skip_initial)
-NSKIP_USRP_TUNE = int(SAMPLE_RATE)  # Samples to drop after each tune (tune_delay)
-
-
 class DANLTest(gr.top_block):
-    def __init__(self, freqs, usrp):
+    def __init__(self, freqs, usrp, profile):
         gr.top_block.__init__(self)
 
         self.freqs = freqs
         self.usrp = usrp
+        self.profile = profile
 
-        nsamples_each_cfreq = FFT_LEN * NAVERAGES
+        nsamples_each_cfreq = profile.fft_len * profile.naverages
         self.ctrl = controller_cc(self.usrp,
                                   freqs.center_freqs,
-                                  LO_OFFSET,
-                                  NSKIP_USRP_INIT,
-                                  NSKIP_USRP_TUNE,
-                                  nsamples_each_cfreq)
+                                  profile.usrp_lo_offset,
+                                  profile.nskip_usrp_init,
+                                  profile.nskip_usrp_tune,
+                                  nsamples_each_cfreq,
+                                  profile.usrp_use_integerN_tuning)
+        self.ctrl.set_exit_after_complete(True)
 
-        self.ctrl.set_exit_after_complete()
+        stream_to_fft_vec = blocks.stream_to_vector(gr.sizeof_gr_complex,
+                                                    profile.fft_len)
+        fft_vec_to_stream = blocks.vector_to_stream(gr.sizeof_float,
+                                                    profile.fft_len)
 
-        stream_to_fft_vec = gnuradio.blocks.stream_to_vector(gr.sizeof_gr_complex,
-                                                             FFT_LEN)
-        fft_vec_to_stream = gnuradio.blocks.vector_to_stream(gr.sizeof_float,
-                                                             FFT_LEN)
-
-        scale = gnuradio.blocks.multiply_const_cc(SCALE_FACTOR, FFT_LEN)
+        scale = blocks.multiply_const_cc(profile.scale_factor,
+                                         profile.fft_len)
 
         forward = True
         shift = True
-        fft = gnuradio.fft.fft_vcc(FFT_LEN, forward, FLATTOP_WIN, shift)
+        fft = gnuradio.fft.fft_vcc(profile.fft_len,
+                                   forward,
+                                   profile.window,
+                                   shift)
 
-        c2mag_sq = gnuradio.blocks.complex_to_mag_squared(FFT_LEN)
+        c2mag_sq = blocks.complex_to_mag_squared(profile.fft_len)
 
         impedance = 50 # ohms
-        power = gnuradio.blocks.multiply_const_ff(impedance, FFT_LEN)
+        power = blocks.multiply_const_ff(impedance, profile.fft_len)
 
-        W2dBm = gnuradio.blocks.nlog10_ff(10.0, FFT_LEN, 30)
+        W2dBm = blocks.nlog10_ff(10.0, profile.fft_len, 30)
 
-        stats = bin_statistics_ff(FFT_LEN, NAVERAGES)
+        stats = bin_statistics_ff(profile.fft_len, profile.naverages)
 
-        stitch_vlen = int(freqs.nsegments * FFT_LEN)
-        stream_to_stitch_vec = gnuradio.blocks.stream_to_vector(gr.sizeof_float,
-                                                                stitch_vlen)
-        stitch = stitch_fft_segments_ff(FFT_LEN,
+        stitch_vlen = int(freqs.nsegments * profile.fft_len)
+        stream_to_stitch_vec = blocks.stream_to_vector(gr.sizeof_float,
+                                                       stitch_vlen)
+        stitch = stitch_fft_segments_ff(profile.fft_len,
                                         freqs.nsegments,
-                                        OVERLAP,
+                                        profile.overlap,
                                         freqs.nvalid_bins)
 
         data_vlen = int(freqs.nsegments * freqs.nvalid_bins)
-        self.data_sink = gnuradio.blocks.vector_sink_f(data_vlen)
+        self.data_sink = blocks.vector_sink_f(data_vlen)
 
         self.connect(self.usrp, self.ctrl)
         self.connect(self.ctrl, stream_to_fft_vec)
@@ -99,24 +90,29 @@ class DANLTest(gr.top_block):
         self.connect(stitch, self.data_sink)
 
 
-
 class Frequencies(object):
-    def __init__(self, octave):
-        """Takes a (start, stop) tuple and produces EVERYTHING you need to know"""
+    def __init__(self, octave, overlap, fft_len, delta_f, sample_rate):
+        """Calculate and cache frequencies used in stitching FFT segments"""
         self.start, self.stop = octave
-        self.span = self.stop - self.start
-        self.nvalid_bins = int((FFT_LEN - (FFT_LEN * OVERLAP))) // 2 * 2
 
-        usable_bw = SAMPLE_RATE * (1 - OVERLAP)
-        self.step = int(round(usable_bw / DELTA_F) * DELTA_F)
+        # Check invariants
+        assert self.start < self.stop        # low freq is lower than high freq
+        assert 0 <= overlap < 1              # overlap is percentage
+        assert math.log(fft_len, 2) % 2 == 0 # fft_len is power of 2
+
+        self.span = self.stop - self.start
+        self.nvalid_bins = int((fft_len - (fft_len * overlap))) // 2 * 2
+
+        usable_bw = sample_rate * (1 - overlap)
+        self.step = int(round(usable_bw / delta_f) * delta_f)
 
         self.center_freqs = self.cache_center_freqs()
         self.nsegments = len(self.center_freqs)
 
-        self.bin_freqs = self.cache_bin_freqs()
+        self.bin_freqs = self.cache_bin_freqs(delta_f)
 
-        self.bin_start = int(FFT_LEN * (OVERLAP / 2))
-        self.bin_stop = int(FFT_LEN - self.bin_start)
+        self.bin_start = int(fft_len * (overlap / 2))
+        self.bin_stop = int(fft_len - self.bin_start)
         self.max_plotted_bin = utils.find_nearest(self.bin_freqs, self.stop) + 1
         self.bin_offset = (self.bin_stop - self.bin_start) / 2
 
@@ -126,45 +122,88 @@ class Frequencies(object):
         max_fc = min_fc + (tmp_nsegments * self.step)
         return np.arange(min_fc, max_fc + 1, self.step)
 
-    def cache_bin_freqs(self):
+    def cache_bin_freqs(self, delta_f):
         max_fc = self.center_freqs[-1]
         max_bin_freq = max_fc + (self.step / 2)
-        return np.arange(self.start, max_bin_freq, DELTA_F)
+        return np.arange(self.start, max_bin_freq, delta_f)
 
 
-if __name__ == '__main__':
-    def valid_serial(serial):
-        """Return device_addr_t if serial valid, else raise ArgumentTypeError"""
-        serial_str = "serial={}".format(serial)
-        found_devices = uhd.find_devices(uhd.device_addr_t(serial_str))
-        if found_devices:
-            return found_devices[0]
-        else:
-            errmsg = "No devices found matching serial {}".format(serial)
-            raise argparse.ArgumentTypeError(errmsg)
+# Matplotlib.ticker.FuncFormatter compatible Hz to MHz with 0 decimal places.
+format_mhz = lambda x, _: "{:.0f}".format(x / float(1e6))
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('serial',
-                        help="Serial number of a connected USRP",
-                        type=valid_serial)
-    args = parser.parse_args()
 
-    stream_args = uhd.stream_args('fc32')
-    usrp = uhd.usrp_source(args.serial, stream_args)
-    usrp.set_samp_rate(SAMPLE_RATE)
-    usrp_gain = usrp.get_gain()
+def main(args):
+    raw_profile = {}
+    execfile(args.filename, {}, raw_profile)
+
+    print("Using following profile:")
+    pprint(raw_profile)
+    print()
+
+    profile = utils.DictDotAccessor(raw_profile)
+
+    print("Initializing USRP")
+    usrp = RadioInterface(profile).usrp
 
     freq_range = usrp.get_freq_range()
     octaves = utils.split_octaves(freq_range)
 
+    print("-----")
     for octave in octaves:
-        freqs = Frequencies(octave)
-        test = DANLTest(freqs, usrp)
+        freqs = Frequencies(octave,
+                            profile.overlap,
+                            profile.fft_len,
+                            profile.delta_f,
+                            profile.usrp_sample_rate)
+
+        test = DANLTest(freqs, usrp, profile)
         print("Running DANL on octave {!r}".format(octave))
         test.run()
 
+        title_txt  = "Displayed Average Noise Level\n"
+        title_txt += "For Octave {0}-{1} MHz of {2} {3}\n"
+        title_txt += "With Sample Rate {4} MS/s and ENBW {5} kHz"
+        plt.suptitle(title_txt.format(format_mhz(freqs.start, None),
+                                      format_mhz(freqs.stop, None),
+                                      profile.usrp_device_str,
+                                      profile.usrp_serial,
+                                      format_mhz(profile.usrp_sample_rate, None),
+                                      profile.enbw / 1e3))
+
+        plt.subplots_adjust(top=0.88)
+        plt.xlabel("Frequency (MHz)")
+        plt.xlim(freqs.start-1e6, freqs.stop+1e6)
+        xticks = np.linspace(freqs.start, freqs.stop, 5, endpoint=True)
+        plt.xticks(xticks)
+
+        xaxis_formatter = FuncFormatter(format_mhz)
+        ax = plt.gca()
+        ax.xaxis.set_major_formatter(xaxis_formatter)
+
+        plt.ylabel("Power (dBm)")
+        plt.grid(color='0.90', linestyle='-', linewidth=1)
+
         data = np.array(test.data_sink.data())
-        plt.plot(freqs.bin_freqs, data)
+        plt.plot(freqs.bin_freqs, data, zorder=99)
+
         plt.show()
 
         del test
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filename',
+                        help="Filename of test profile",
+                        type=utils.filetype)
+    parser.add_argument('--no-plot',
+                        help="Do not plot power meter readings against " +
+                             "scaled USRP readings after test completes",
+                        action='store_true')
+    args = parser.parse_args()
+
+    try:
+        main(args)
+    except KeyboardInterrupt:
+        print("Caught Ctrl-C, exiting...", file=sys.stderr)
+        sys.exit(130)

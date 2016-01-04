@@ -52,15 +52,15 @@ namespace gr {
       static sptr make(boost::shared_ptr<gr::uhd::usrp_source> &usrp,
                        std::vector<double> center_freqs,
                        double lo_offset,
-                       size_t initial_delay,
-                       size_t tune_delay,
+                       size_t nskip_init,
+                       size_t nskip_tune,
                        size_t ncopy,
-                       bool unittest=false);
+                       bool use_integer_tuning=false);
 
       /*!
        * \brief Return true if flowgraph will exit at end of span
        */
-      virtual bool get_exit_after_complete() = 0;
+      virtual bool exit_after_complete() = 0;
 
       /*!
        * \brief Exit the flowgraph at the end of the span.
@@ -68,12 +68,14 @@ namespace gr {
        * The end of the span means the block has copied a multiple of
        * ncopy*nsegments samples.
        */
-      virtual void set_exit_after_complete() = 0;
+      virtual void set_exit_after_complete(bool exit_after_complete) = 0;
 
       /*!
-       * \brief Do not return WORK_DONE until set_exit_after_complete is called.
+       * \brief Disable verification of tag frequency
+       *
+       * Useful for unit testing
        */
-      virtual void clear_exit_after_complete() = 0;
+      virtual void disable_verify_tag_freq() = 0;
     };
 
   } // namespace usrpcalibrator

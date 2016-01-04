@@ -66,8 +66,8 @@ class qa_controller_cc(gr_unittest.TestCase):
         ncopy = 100
 
         ctrl = usrpcalibrator.controller_cc(usrp_ptr, cfreqs, lo_offset,
-                                          initial_delay, tune_delay, ncopy,
-                                          unittest=True)
+                                          initial_delay, tune_delay, ncopy)
+        ctrl.disable_verify_tag_freq()
 
         self.tb.connect((src, 0), self.tag_debug)
         self.tb.connect((src, 0), ctrl, self.vsink)
@@ -99,9 +99,9 @@ class qa_controller_cc(gr_unittest.TestCase):
         ncopy = 100
 
         ctrl = usrpcalibrator.controller_cc(usrp_ptr, cfreqs, lo_offset,
-                                          initial_delay, tune_delay, ncopy,
-                                          unittest=True)
-        ctrl.set_exit_after_complete()
+                                          initial_delay, tune_delay, ncopy)
+        ctrl.set_exit_after_complete(True)
+        ctrl.disable_verify_tag_freq() # for unittesting
 
         self.tb.connect((src, 0), self.tag_debug)
         self.tb.connect((src, 0), ctrl, self.vsink)
@@ -147,8 +147,8 @@ class qa_controller_cc(gr_unittest.TestCase):
         ncopy = 100
 
         ctrl = usrpcalibrator.controller_cc(usrp_ptr, cfreqs, lo_offset,
-                                          initial_delay, tune_delay, ncopy,
-                                          unittest=True)
+                                          initial_delay, tune_delay, ncopy)
+        ctrl.disable_verify_tag_freq()
 
         self.tb.connect((src, 0), self.tag_debug)
         self.tb.connect((src, 0), ctrl, self.vsink)
@@ -182,8 +182,8 @@ class qa_controller_cc(gr_unittest.TestCase):
         ncopy = 30
 
         ctrl = usrpcalibrator.controller_cc(usrp_ptr, cfreqs, lo_offset,
-                                          initial_delay, tune_delay, ncopy,
-                                          unittest=True)
+                                          initial_delay, tune_delay, ncopy)
+        ctrl.disable_verify_tag_freq()
 
         self.tb.connect((src, 0), self.tag_debug)
         self.tb.connect((src, 0), ctrl, self.vsink)
