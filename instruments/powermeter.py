@@ -33,6 +33,10 @@ class PowerMeter(object):
         # Set measurement rate to double (40 readings/second)
         self.meter.write('SENSe:MRATe DOUBle')
 
+    def set_frequency(self, freq):
+        cmd = 'SENSe:FREQuency ' + eng_notation.num_to_str(freq) + 'HZ'
+        self.meter.write(cmd)
+
     def take_measurement(self):
         response = self.meter.query(self.profile.powermeter_scpi_measure_cmd)
         return eng_notation.str_to_num(response)

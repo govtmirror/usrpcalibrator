@@ -23,7 +23,7 @@ usrp_ip_address = '192.168.130.146'  # uhd_find_devices --args="addr=***"
 usrp_clock_rate = 100e6 # 100 MHz
 usrp_sample_rate = 10e6 # 2 MS/s
 usrp_stream_args = 'fc32'
-usrp_gain = {'PGA0': 15}
+usrp_gain = {'PGA0': 25}
 usrp_center_freq = 1700e6 # 1700 MHz
 usrp_lo_offset = usrp_sample_rate / 2.0
 usrp_use_integerN_tuning = False

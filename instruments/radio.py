@@ -48,15 +48,18 @@ class RadioInterface():
         self.usrp.set_samp_rate(profile.usrp_sample_rate)
         for gain_type, value in profile.usrp_gain.items():
             self.usrp.set_gain(value, gain_type)
+        self.set_frequency(profile.usrp_center_freq)
 
-        if profile.test_type == 'pcal':
-            tune_request = uhd.tune_request(profile.usrp_center_freq,
-                                            profile.usrp_lo_offset)
-            if profile.usrp_use_integerN_tuning:
-                tune_request.args = uhd.device_addr('mode_n=integer')
+    def set_frequency(self, freq):
+        tune_request = uhd.tune_request(freq, self.profile.usrp_lo_offset)
+        if self.profile.usrp_use_integerN_tuning:
+            tune_request.args = uhd.device_addr('mode_n=integer')
 
-            tune_result = self.usrp.set_center_freq(tune_request)
-            print(tune_result.to_pp_string())
+        tune_result = self.usrp.set_center_freq(tune_request)
+        print(tune_result.to_pp_string())
+
+    def set_gain(self, gain):
+        self.usrp.set_gain(gain)
 
     def acquire_samples(self):
         """Aquire samples for power cal"""

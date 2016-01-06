@@ -24,29 +24,26 @@ class SignalGenerator(object):
         # Disable modulation
         self.siggen.write(':OUTPut:MODulation:STATe OFF')
 
-        # Set frequency
-        freq = eng_notation.num_to_str(profile.siggen_center_freq)
-        freq_cmd = ':FREQuency ' + freq + 'HZ'
-        self.siggen.write(freq_cmd)
-
-        ampl = profile.siggen_amplitude
-        if profile.siggen_amplitude_check and ampl > -15:
-            err =  "\n\nThe test profile specifies a signal generator amplitude of "
-            err += "{} which may damage your USRP.\nMost USRP frontends have a "
-            err += "maximum input power of -15dBm.\n"
-            err += "If you've taken steps to protect your frontend, add the "
-            err += "following line in your test profile:\n\n"
-            err += "siggen_amplitude_check = False\n"
-            raise ValueError(err.format(ampl))
-
-        pow_cmd = ':POWer ' + eng_notation.num_to_str(ampl) + 'DBM'
-        self.siggen.write(pow_cmd)
-
     def rf_on(self):
         self.siggen.write(self.profile.siggen_scpi_rf_on_cmd)
 
     def rf_off(self):
         self.siggen.write(self.profile.siggen_scpi_rf_off_cmd)
+
+    def set_amplitude(self, ampl):
+        if self.profile.siggen_amplitude_check and ampl > -15:
+            err  = "Most USRP frontends have a maximum input power of -15dBm.\n"
+            err += "Your desired amplitude of {} may damange your frontend.\n"
+            err += "If you've taken steps to protect your frontend, add the "
+            err += "following line in your test profile:\n\n"
+            err += "siggen_amplitude_check = False\n"
+            raise ValueError(err.format(ampl))
+        cmd = ':POWer ' + eng_notation.num_to_str(ampl) + 'DBM'
+        self.siggen.write(cmd)
+
+    def set_frequency(self, freq):
+        cmd = ':FREQuency ' + eng_notation.num_to_str(freq) + 'HZ'
+        self.siggen.write(cmd)
 
     def __del__(self):
         # Return siggen to PRESet state

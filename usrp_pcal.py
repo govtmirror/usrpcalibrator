@@ -26,6 +26,8 @@ def run_test(profile):
     meter = PowerMeter(profile)
     print("Initializing signal generator")
     siggen = SignalGenerator(profile)
+    siggen.set_frequency(profile.siggen_center_freq)
+    siggen.set_amplitude(profile.siggen_amplitude)
     print("Initializing switch")
     switch = SwitchDriver(profile)
 
@@ -97,11 +99,11 @@ def run_test(profile):
 
 def compute_scale_factor(meter_measurements, radio_measurements):
     # Convert power meter measurements from dBm to volts
-    meter_measurements_volts = dBm_to_volts(meter_measurements)
+    meter_measurements_volts = utils.dBm_to_volts(meter_measurements)
     meter_mean_voltage = np.mean(meter_measurements_volts)
 
     # Convert radio measurements from dBm to volts
-    radio_measurements_volts = dBm_to_volts(radio_measurements)
+    radio_measurements_volts = utils.dBm_to_volts(radio_measurements)
     radio_mean_voltage = np.mean(radio_measurements_volts)
 
     return meter_mean_voltage / radio_mean_voltage
