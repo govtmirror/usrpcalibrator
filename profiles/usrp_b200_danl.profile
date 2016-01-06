@@ -16,7 +16,7 @@ test_type = 'danl'
 usrp_device_str = "USRP B200"        # Arbitrary name used in plot title
 
 # Applied to raw USRP samples
-scale_factor = 0.00852514295721
+scale_factor = 0.00280277061854 # 50 dB gain 5 min test
 
 # The following will be used to find the correct device for testing.
 # A value of None means "don't filter by this value"
@@ -28,7 +28,7 @@ usrp_ip_address = None               # uhd_find_devices --args="addr=***"
 usrp_clock_rate = 40e6 # 40 MHz
 usrp_sample_rate = 10e6 # 10 MS/s
 usrp_stream_args = 'fc32'
-usrp_gain = {'PGA': 70}
+usrp_gain = {'PGA': 50}
 usrp_center_freq = 1700e6 # 1700 MHz
 usrp_lo_offset = usrp_sample_rate / 2.0
 usrp_use_integerN_tuning = False

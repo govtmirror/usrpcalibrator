@@ -42,7 +42,7 @@ def run_test(profile):
     time.sleep(2)
     print("-----\n")
 
-    last_i = profile.pcal_nmeasurements - 1
+    last_i = profile.nmeasurements - 1
     for i in range(profile.nmeasurements):
         start_time = time.time()
 
@@ -132,10 +132,12 @@ def main(args):
         scaled_radio_measurements_dBm = utils.volts_to_dBm(scaled_radio_measurements)
 
         title_txt  = "Power Measurements Over Time\n"
-        title_txt += "With {} Scale Factor Applied to {} {}"
+        title_txt += "With {} Scale Factor Applied to {} {}\n"
+        title_txt += "And Gain Setting of {!r} dB"
         plt.suptitle(title_txt.format(scale_factor,
                                       profile.usrp_device_str,
-                                      profile.usrp_serial))
+                                      profile.usrp_serial,
+                                      profile.usrp_gain))
 
         usrp_line, = plt.plot(range(1, profile.nmeasurements+1),
                                scaled_radio_measurements_dBm,
@@ -164,6 +166,7 @@ def main(args):
         xlabel_txt = "Number of measurements at {} second intervals"
         plt.xlabel(xlabel_txt.format(profile.time_between_measurements))
 
+        plt.subplots_adjust(top=0.88)
         plt.show()
 
     print("Calibration completed successfully, exiting...")

@@ -162,13 +162,14 @@ def main(args):
 
         title_txt  = "Displayed Average Noise Level\n"
         title_txt += "For Octave {0}-{1} MHz of {2} {3}\n"
-        title_txt += "With Sample Rate {4} MS/s and ENBW {5} kHz"
+        title_txt += "With Sample Rate {4} MS/s, ENBW {5} kHz, gain {6:!r} dB"
         plt.suptitle(title_txt.format(format_mhz(freqs.start, None),
                                       format_mhz(freqs.stop, None),
                                       profile.usrp_device_str,
                                       profile.usrp_serial,
                                       format_mhz(profile.usrp_sample_rate, None),
-                                      profile.enbw / 1e3))
+                                      profile.enbw / 1e3,
+                                      profile.usrp_gain))
 
         plt.subplots_adjust(top=0.88)
         plt.xlabel("Frequency (MHz)")

@@ -58,18 +58,24 @@ def run_test(profile):
     p1db = []
 
     for fc in frequencies:
+        print("Setting USRP to {} MHz".format(fc / 1e6))
         radio.set_frequency(fc)
+        print("Setting USRP to {} MHz".format(fc / 1e6))
         meter.set_frequency(fc)
+        print("Setting USRP to {} MHz".format(fc / 1e6))
         siggen.set_frequency(fc)
 
+        print("Signal generator RF ON")
         siggen.rf_on()
         time.sleep(2)
 
         max_ampl = -15
         for i, ampl in enumerate(amplitudes):
+            print("Switching to power meter")
             switch.select_meter()
             time.sleep(2)
 
+            print("Setting signal generator amplitude to {}".format(ampl))
             siggen.set_amplitude(ampl)
             time.sleep(2)
 
@@ -79,6 +85,7 @@ def run_test(profile):
             meter_measurements.append(meter_measurement)
             print("{} dBm".format(meter_measurement))
 
+            print("Switching to USRP")
             switch.select_radio()
             time.sleep(2)
 
@@ -107,12 +114,14 @@ def run_test(profile):
                 if trendline_fn(meter_measurement) - radio_measurement >= 1:
                     # Reached P1dB
                     max_ampl = meter_measurement
+                    print("Detected P1dB {} at {}".format(meter_measurement, fc))
                     break
 
             # Should not trigger this unless profile.inline_attenuator incorrect
             assert meter_measurement + 1 < -15
 
         p1db.append(max_ampl)
+        print("Signal Generator RF OFF")
         siggen.rf_off()
         time.sleep(2)
 

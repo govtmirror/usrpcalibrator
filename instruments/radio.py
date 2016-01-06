@@ -63,7 +63,7 @@ class RadioInterface():
 
     def acquire_samples(self):
         """Aquire samples for power cal"""
-        total_samples = self.profile.pcal_nskip + self.profile.pcal_nsamples
+        total_samples = self.profile.nskip + self.profile.nsamples
         acquired_samples = self.usrp.finite_acquisition(total_samples)
-        data = np.array(acquired_samples[self.profile.pcal_nskip:])
+        data = np.array(acquired_samples[self.profile.nskip:])
         return data
