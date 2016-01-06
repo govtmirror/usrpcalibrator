@@ -28,10 +28,10 @@ usrp_center_freq = 1700e6 # 1700 MHz
 usrp_lo_offset = usrp_sample_rate / 2.0
 usrp_use_integerN_tuning = False
 
+inline_attenuator = 30 # dB of attenatuation inline after siggen
 siggen_visa_connect_str = 'TCPIP0::192.168.130.76::5025::INSTR'
 siggen_center_freq = 1700e6 # 1700 MHz
 siggen_amplitude = -10
-siggen_amplitude_check = False       # Leave "True" if siggen connected directly to USRP
 siggen_scpi_rf_on_cmd = ':OUTPut:STATe ON'
 siggen_scpi_rf_off_cmd = ':OUTPut:STATe OFF'
 

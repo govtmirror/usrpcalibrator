@@ -31,12 +31,8 @@ class SignalGenerator(object):
         self.siggen.write(self.profile.siggen_scpi_rf_off_cmd)
 
     def set_amplitude(self, ampl):
-        if self.profile.siggen_amplitude_check and ampl > -15:
-            err  = "Most USRP frontends have a maximum input power of -15dBm.\n"
-            err += "Your desired amplitude of {} may damange your frontend.\n"
-            err += "If you've taken steps to protect your frontend, add the "
-            err += "following line in your test profile:\n\n"
-            err += "siggen_amplitude_check = False\n"
+        if ampl - self.profile.inline_attenuator > -15:
+            err  = "Requested amplitude > -15 dBm.\n"
             raise ValueError(err.format(ampl))
         cmd = ':POWer ' + eng_notation.num_to_str(ampl) + 'DBM'
         self.siggen.write(cmd)
