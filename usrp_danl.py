@@ -63,12 +63,13 @@ class DANLTest(gr.top_block):
                                    profile.window,
                                    shift)
 
+        window_pwr = profile.fft_len * sum(tap*tap for tap in profile.window)
+
         c2mag_sq = blocks.complex_to_mag_squared(profile.fft_len)
-
         impedance = 50 # ohms
-        power = blocks.multiply_const_ff(1/impedance, profile.fft_len)
+        power_scalar = -10.0 * math.log10(window_pwr * impedance)
 
-        W2dBm = blocks.nlog10_ff(10.0, profile.fft_len, 30)
+        W2dBm = blocks.nlog10_ff(10.0, profile.fft_len, 30 + power_scalar)
 
         stats = bin_statistics_ff(profile.fft_len, profile.naverages)
 
@@ -89,8 +90,7 @@ class DANLTest(gr.top_block):
         self.connect(scale, fft)
         self.connect(fft, c2mag_sq)
         self.connect(c2mag_sq, stats)
-        self.connect(stats, power)
-        self.connect(power, W2dBm)
+        self.connect(stats, W2dBm)
         self.connect(W2dBm, fft_vec_to_stream)
         self.connect(fft_vec_to_stream, stream_to_stitch_vec, stitch)
         self.connect(stitch, self.data_sink)
