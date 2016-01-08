@@ -4,8 +4,10 @@ from __future__ import division, print_function
 
 import argparse
 import math
+import os
 from pprint import pprint
 import sys
+import time
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -166,11 +168,13 @@ def main(args):
         print("Running DANL on octave {!r}".format(octave))
         test.run()
 
+        octave_str = '-'.join((format_mhz(freqs.start, None),
+                              format_mhz(freqs.stop, None) + " MHz"))
+
         title_txt  = "Displayed Average Noise Level\n"
-        title_txt += "For Octave {0}-{1} MHz of {2} {3}\n"
-        title_txt += "With Sample Rate {4} MS/s, ENBW {5} kHz, gain {6!r} dB"
-        plt.suptitle(title_txt.format(format_mhz(freqs.start, None),
-                                      format_mhz(freqs.stop, None),
+        title_txt += "For Octave {0} of {1} {2}\n"
+        title_txt += "With Sample Rate {3} MS/s, ENBW {4} kHz, gain {5!r} dB"
+        plt.suptitle(title_txt.format(octave_str,
                                       profile.usrp_device_str,
                                       profile.usrp_serial,
                                       format_mhz(profile.usrp_sample_rate, None),
@@ -188,12 +192,32 @@ def main(args):
         ax.xaxis.set_major_formatter(xaxis_formatter)
 
         plt.ylabel("Power (dBm)")
+        plt.ylim(-140, -90)   # Experiementally good range
         plt.grid(color='0.90', linestyle='-', linewidth=1)
 
         data = np.array(test.data_sink.data())
         plt.plot(freqs.bin_freqs, data, zorder=99)
 
-        plt.show()
+        # Ensure test_results dir exists
+        test_results_dir = 'test_results'
+        try:
+            os.makedirs(test_results_dir)
+        except OSError:
+            if not os.path.isdir(test_results_dir):
+                raise
+
+        fig_name = '_'.join((profile.usrp_device_type,
+                             profile.usrp_serial,
+                             profile.test_type,
+                             octave_str,
+                             str(int(time.time()))))
+
+        fig_path = os.path.join(test_results_dir, fig_name + '.png')
+        print("Saving {}".format(fig_path))
+        plt.savefig(fig_path)
+        #plt.show()
+
+        plt.close()
 
         del test
 
