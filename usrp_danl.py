@@ -32,6 +32,12 @@ class DANLTest(gr.top_block):
         self.usrp = usrp
         self.profile = profile
 
+
+        # TODO: determine if profile.scale_factor needs to be corrected for
+        #       gain to make this step correct
+        #atten = usrp.get_gain_range().stop() - usrp.get_gain()
+        #self.adjusted_scale_factor = profile.scale_factor * (10**(atten/20))
+
         nsamples_each_cfreq = profile.fft_len * profile.naverages
         self.ctrl = controller_cc(self.usrp,
                                   freqs.center_freqs,
@@ -60,7 +66,7 @@ class DANLTest(gr.top_block):
         c2mag_sq = blocks.complex_to_mag_squared(profile.fft_len)
 
         impedance = 50 # ohms
-        power = blocks.multiply_const_ff(impedance, profile.fft_len)
+        power = blocks.multiply_const_ff(1/impedance, profile.fft_len)
 
         W2dBm = blocks.nlog10_ff(10.0, profile.fft_len, 30)
 
@@ -162,7 +168,7 @@ def main(args):
 
         title_txt  = "Displayed Average Noise Level\n"
         title_txt += "For Octave {0}-{1} MHz of {2} {3}\n"
-        title_txt += "With Sample Rate {4} MS/s, ENBW {5} kHz, gain {6:!r} dB"
+        title_txt += "With Sample Rate {4} MS/s, ENBW {5} kHz, gain {6!r} dB"
         plt.suptitle(title_txt.format(format_mhz(freqs.start, None),
                                       format_mhz(freqs.stop, None),
                                       profile.usrp_device_str,
