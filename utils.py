@@ -44,6 +44,6 @@ def volts_to_dBm(values):
 
 
 def find_nearest(array, value):
-    """Find the index of the closest matching value in a NumPyarray."""
+    """Find the index of the closest matching value in a NumPy array."""
     #http://stackoverflow.com/a/2566508
     return np.abs(array - value).argmin()

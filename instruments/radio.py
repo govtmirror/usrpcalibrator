@@ -46,8 +46,13 @@ class RadioInterface():
         self.usrp.set_auto_dc_offset(True)
         self.usrp.set_clock_rate(profile.usrp_clock_rate)
         self.usrp.set_samp_rate(profile.usrp_sample_rate)
+        self.sample_rate = self.usrp.get_samp_rate()
+        print("USRP actual sample rate: {} MS/s".format(self.sample_rate/1e6))
+
         for gain_type, value in profile.usrp_gain.items():
             self.usrp.set_gain(value, gain_type)
+        print("USRP gain: {} dB".format(self.usrp.get_gain()))
+
         self.set_frequency(profile.usrp_center_freq)
 
     def set_frequency(self, freq):
@@ -58,12 +63,11 @@ class RadioInterface():
         tune_result = self.usrp.set_center_freq(tune_request)
         print(tune_result.to_pp_string())
 
-    def set_gain(self, gain):
-        self.usrp.set_gain(gain)
-
     def acquire_samples(self):
         """Aquire samples for power cal"""
         total_samples = self.profile.nskip + self.profile.nsamples
         acquired_samples = self.usrp.finite_acquisition(total_samples)
         data = np.array(acquired_samples[self.profile.nskip:])
+        assert len(data) == self.profile.nsamples
+
         return data
