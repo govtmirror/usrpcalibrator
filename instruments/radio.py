@@ -53,7 +53,8 @@ class RadioInterface():
             self.usrp.set_gain(value, gain_type)
         print("USRP gain: {} dB".format(self.usrp.get_gain()))
 
-        self.set_frequency(profile.usrp_center_freq)
+        if hasattr(profile, 'usrp_center_freq'):
+            self.set_frequency(profile.usrp_center_freq)
 
     def set_frequency(self, freq):
         tune_request = uhd.tune_request(freq, self.profile.usrp_lo_offset)
