@@ -1,11 +1,16 @@
+#!/usr/bin/env python
+
 from __future__ import division, print_function
 
 import argparse
 import math
+import os
 from pprint import pprint
 import sys
+import time
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 import scipy.io as sio
 
@@ -14,13 +19,24 @@ from usrpcalibrator import (controller_cc,
                             stitch_fft_segments_ff)
 
 from instruments.radio import RadioInterface
-from instruments.siggen import SignalGenerator
-from instruments.powermeter import PowerMeter
-from instruments.switchdriver import SwitchDriver
+from instruments.signalgenerator import SignalGenerator
 
 import utils
 
 
+# Matplotlib.ticker.FuncFormatter compatible Hz to MHz with 0 decimal places.
+format_mhz = lambda x, _: "{:.0f}".format(x / float(1e6))
+
+
+# Ensure test_results dir exists
+test_results_dir = 'test_results'
+try:
+    os.makedirs(test_results_dir)
+except OSError:
+    if not os.path.isdir(test_results_dir):
+        raise
+
+        
 def run_test(profile):
     """Runs a P1dB test over USRP frequency range in 100 MHz intervals.
 
@@ -31,38 +47,29 @@ def run_test(profile):
     """
     print("Initializing USRP")
     radio = RadioInterface(profile)
-    print("Initializing power meter")
-    meter = PowerMeter(profile)
     print("Initializing signal generator")
     siggen = SignalGenerator(profile)
-    print("Initializing switch")
-    switch = SwitchDriver(profile)
 
-    meter_measurements = []
     radio_measurements = []
+    power_in = []
 
     time.sleep(2)
     print("-----\n")
 
-    freq_range_min = radio.usrp.get_freq_range.start()
-    freq_range_max = radio.usrp.get_freq_range.stop()
+    freq_range_min = radio.usrp.get_freq_range().start()
+    freq_range_max = radio.usrp.get_freq_range().stop()
 
     # Run a test every 100 MHz starting 50 MHz above radio's min freq
-    frequencies = np.arange(freq_range_min+50e6, freq_range_max, 100e6)
+    frequencies = np.arange(freq_range_min+50e6, freq_range_max, 200e6)
     # At each fc, step from -60 to at most -16 in 1 dB steps
     amplitudes = np.arange(-60, -15)
-
-    # Adjust for any inline attenuation
-    amplitudes = amplitudes + profile.inline_attenuator
 
     p1db = []
 
     for fc in frequencies:
         print("Setting USRP to {} MHz".format(fc / 1e6))
         radio.set_frequency(fc)
-        print("Setting USRP to {} MHz".format(fc / 1e6))
-        meter.set_frequency(fc)
-        print("Setting USRP to {} MHz".format(fc / 1e6))
+        print("Setting siggen to {} MHz".format(fc / 1e6))
         siggen.set_frequency(fc)
 
         print("Signal generator RF ON")
@@ -71,22 +78,10 @@ def run_test(profile):
 
         max_ampl = -15
         for i, ampl in enumerate(amplitudes):
-            print("Switching to power meter")
-            switch.select_meter()
-            time.sleep(2)
-
-            print("Setting signal generator amplitude to {}".format(ampl))
-            siggen.set_amplitude(ampl)
-            time.sleep(2)
-
-            print("Taking power meter measurement... ", end="")
-            sys.stdout.flush()
-            meter_measurement = meter.take_measurement()
-            meter_measurements.append(meter_measurement)
-            print("{} dBm".format(meter_measurement))
-
-            print("Switching to USRP")
-            switch.select_radio()
+            adjusted_ampl = ampl + profile.inline_attenuator
+            siggen_str = "Setting siggen amplitude to {} dBm ({} dBm before attenuation)"
+            print(siggen_str.format(ampl, adjusted_ampl))
+            siggen.set_amplitude(adjusted_ampl)
             time.sleep(2)
 
             print("Streaming samples from USRP... ", end="")
@@ -108,18 +103,62 @@ def run_test(profile):
             if i == 9:
                 # After 10 measurements, determine a line of best fit.
                 # x-axis is the power meter measurements, y-axis is radio
-                fit = np.polyfit(meter_measurements, radio_measurements, 1)
+                assert len(amplitudes[:i+1]) == len(radio_measurements)
+                fit = np.polyfit(amplitudes[:i+1], radio_measurements, 1)
                 trendline_fn = np.poly1d(fit)
             elif i > 9:
-                if trendline_fn(meter_measurement) - radio_measurement >= 1:
+                expected = trendline_fn(ampl)
+                print("Expected measurement value: {} dBm".format(expected))
+                actual = radio_measurement
+                print("Actual measurement value: {} dBm".format(actual))
+                error = abs(expected - actual)
+                print("Error: {} dBm".format(error))
+                if error >= 1:
                     # Reached P1dB
-                    max_ampl = meter_measurement
-                    print("Detected P1dB {} at {}".format(meter_measurement, fc))
+                    max_ampl = ampl
+                    print("Detected P1dB {} dBm at {} MHz".format(ampl, fc/1e6))
                     break
 
-            # Should not trigger this unless profile.inline_attenuator incorrect
-            assert meter_measurement + 1 < -15
+            assert ampl + 1 < -15
 
+        fc_str = format_mhz(fc, None) + " MHz"
+
+        plt.plot(amplitudes[:i+1],
+                 [trendline_fn(a) for a in amplitudes[:i+1]],
+                 'k--',
+                 label="Expected measurement")    
+        plt.plot(amplitudes[:i+1], amplitudes[:i+1], label="Power at USRP RF-in")
+        plt.plot(amplitudes[:i+1], radio_measurements, label="Actual measurement")
+        plt.legend(loc='best')
+        plt.xlabel("Power at USRP RF-in (dBm)")
+        plt.ylabel("USRP measurement (dBm)")
+
+        plt.grid(color='.90', linestyle='-', linewidth=1)
+
+        title_txt  = "1 dB Compression Test at {}\n"
+        title_txt += "With {} Scale Factor Applied to {} {}\n"
+        title_txt += "And Gain Setting of {!r} dB"
+        plt.suptitle(title_txt.format(fc_str,
+                                      profile.scale_factor,
+                                      profile.usrp_device_str,
+                                      profile.usrp_serial,
+                                      profile.usrp_gain))
+        plt.subplots_adjust(top=0.88)
+
+        fig_name = '_'.join((profile.usrp_device_type,
+                             profile.usrp_serial,
+                             profile.test_type,
+                             fc_str,
+                             str(int(time.time()))))
+
+        fig_path = os.path.join(test_results_dir, fig_name + '.png')
+        print("Saving {}".format(fig_path))
+        plt.savefig(fig_path)
+        plt.close()
+
+        print("Clearing radio measurements")
+        radio_measurements = []
+        
         p1db.append(max_ampl)
         print("Signal Generator RF OFF")
         siggen.rf_off()
@@ -145,10 +184,16 @@ def main(args):
 
     print("Plotting...\n")
 
-    title_txt  = "1 dB Compression Test for {} {}"
-    plt.suptitle(title_txt.format(profile.usrp_device_str,
-                                  profile.usrp_serial))
+    title_txt  = "1 dB Compression Test\n"
+    title_txt += "With {} Scale Factor Applied to {} {}\n"
+    title_txt += "And Gain Setting of {!r} dB"
+    plt.suptitle(title_txt.format(profile.scale_factor,
+                                  profile.usrp_device_str,
+                                  profile.usrp_serial,
+                                  profile.usrp_gain))
 
+    plt.subplots_adjust(top=0.88)
+    
     p1db_line, = plt.plot(frequencies,
                           p1db,
                           label="P1dB",
@@ -156,9 +201,21 @@ def main(args):
     plt_legend = plt.legend(loc='best')
     plt.grid(color='.90', linestyle='-', linewidth=1)
 
-    plt.xlabel("Frequency")
-    plt.ylabel("Power (dBm)")
+    plt.xlabel("Frequency (MHz)")
+    plt.ylabel("Power at USRP RF-in (dBm)")
 
+    xaxis_formatter = FuncFormatter(format_mhz)
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(xaxis_formatter)   
+    
+    fig_name = '_'.join((profile.usrp_device_type,
+                         profile.usrp_serial,
+                         profile.test_type,
+                         str(int(time.time()))))
+
+    fig_path = os.path.join(test_results_dir, fig_name + '.png')
+    print("Saving {}".format(fig_path))
+    plt.savefig(fig_path)
     plt.show()
 
 
