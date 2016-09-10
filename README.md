@@ -19,7 +19,7 @@ Example Usage
 -------------
 
 ```bash
-$ ./usrp_power_cal.py test_profiles/usrp_n210_sbx.profile 
+$ ./usrp_power_cal.py test_profiles/usrp_n210_sbx.profile
 linux; GNU C++ version 4.8.4; Boost_105400; UHD_003.010.git-101-g4a1cb1f2
 
 Using following profile:
@@ -58,7 +58,7 @@ Found the following USRP matching test profile criteria:
 Device Address:
     type: usrp2
     addr: 192.168.***.***
-    name: 
+    name:
     serial: *******
 
 -- Opening a USRP2/N-Series device...
@@ -114,3 +114,11 @@ Calibration completed successfully, exiting...
 ![N210 Plot](img/USRP_N210.png)
 
 ![B200 Plot](img/USRP_B200.png)
+
+Support
+-------
+Douglas Anderson | NTIA/Institute for Telecommunication Sciences | danderson@bldrdoc.its.gov
+
+Legal
+-----
+Copyright NTIA/Institute for Telecommunication Sciences. Released under GPL 3 - see [LICENSE](LICENSE.txt).
