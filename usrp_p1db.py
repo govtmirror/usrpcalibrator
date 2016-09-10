@@ -3,7 +3,6 @@
 from __future__ import division, print_function
 
 import argparse
-import math
 import os
 from pprint import pprint
 import sys
@@ -12,11 +11,6 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import numpy as np
-import scipy.io as sio
-
-from usrpcalibrator import (controller_cc,
-                            bin_statistics_ff,
-                            stitch_fft_segments_ff)
 
 from instruments.radio import RadioInterface
 from instruments.signalgenerator import SignalGenerator
@@ -36,7 +30,7 @@ except OSError:
     if not os.path.isdir(test_results_dir):
         raise
 
-        
+
 def run_test(profile):
     """Runs a P1dB test over USRP frequency range in 100 MHz intervals.
 
@@ -51,7 +45,6 @@ def run_test(profile):
     siggen = SignalGenerator(profile)
 
     radio_measurements = []
-    power_in = []
 
     time.sleep(2)
     print("-----\n")
@@ -126,7 +119,7 @@ def run_test(profile):
         plt.plot(amplitudes[:i+1],
                  [trendline_fn(a) for a in amplitudes[:i+1]],
                  'k--',
-                 label="Expected measurement")    
+                 label="Expected measurement")
         plt.plot(amplitudes[:i+1], amplitudes[:i+1], label="Power at USRP RF-in")
         plt.plot(amplitudes[:i+1], radio_measurements, label="Actual measurement")
         plt.legend(loc='best')
@@ -158,7 +151,7 @@ def run_test(profile):
 
         print("Clearing radio measurements")
         radio_measurements = []
-        
+
         p1db.append(max_ampl)
         print("Signal Generator RF OFF")
         siggen.rf_off()
@@ -193,7 +186,7 @@ def main(args):
                                   profile.usrp_gain))
 
     plt.subplots_adjust(top=0.88)
-    
+
     p1db_line, = plt.plot(frequencies,
                           p1db,
                           label="P1dB",
@@ -206,8 +199,8 @@ def main(args):
 
     xaxis_formatter = FuncFormatter(format_mhz)
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(xaxis_formatter)   
-    
+    ax.xaxis.set_major_formatter(xaxis_formatter)
+
     fig_name = '_'.join((profile.usrp_device_type,
                          profile.usrp_serial,
                          profile.test_type,

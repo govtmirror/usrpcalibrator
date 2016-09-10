@@ -10,8 +10,6 @@ import time
 from matplotlib import pyplot as plt
 import numpy as np
 
-from gnuradio import blocks, gr, uhd
-
 from instruments.radio import RadioInterface
 from instruments.powermeter import PowerMeter
 from instruments.signalgenerator import SignalGenerator

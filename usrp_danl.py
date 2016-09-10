@@ -12,12 +12,10 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import numpy as np
-import scipy.io as sio
 
 import gnuradio.fft
 from gnuradio import blocks
 from gnuradio import gr
-from gnuradio import uhd
 
 from instruments.radio import RadioInterface
 from usrpcalibrator import (controller_cc,
